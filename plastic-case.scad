@@ -29,9 +29,11 @@ base_t=above_shield + base_headroom;
 base_w=90;
 base_h=65;
 
-drill_hole=3 + 0.25;
+drill_hole=3 + 0.3;
 
 connector_height=9.3;
+
+heatsink_extra_space=4;  // Additional space around edges of the heatsink.
 
 // The standoff in the corner of the analog area. With
 // one flat area, so that it is possible to tempoarily fix
@@ -82,21 +84,25 @@ module sata() {
 module heatsink() {
     color("DarkSlateGray") rotate([0, 0, -45]) translate([0, 0, 10]) {
 	difference() {
-	    cube([28.5 + 1, 28.5 + 1, 20], center=true);
-	    translate([0, 0, 2]) cube([30, 0.8, 16], center=true);  // Some support
+	    cube([28.5 + heatsink_extra_space, 28.5 + heatsink_extra_space, 20], center=true);
+            // Some support through the fins
+	    translate([0, 0, 2]) cube([30 + heatsink_extra_space, 0.8, 16], center=true);
 	}
     }
     translate([-23.3, 0, 0]) cylinder(r=4, h=9);
     translate([+23.3, 0, 0]) cylinder(r=4, h=9);
 }
 module led_window() {
-    cube([34, 3, 10]);
+    cube([34, 3, 12]);
 }
-module bnc_cut() {
+module bnc_cut(radius=4.2) {
     hull() {
-	rotate([0, 90, 0]) cylinder(r=4, h=15);
-	translate([0, -4, -15]) cube([15, 8, 1]);
+	rotate([0, 90, 0]) cylinder(r=radius, h=15);
+	translate([0, -4, -15]) cube([15, 2 * radius, 1]);
     }
+}
+module arrow() {
+    cylinder(r=2.5, h=30, $fn=3);
 }
 
 // The rough outline of the RedPitaya, so that we can substract its volume from the
@@ -114,6 +120,11 @@ module RedPitaya() {
 	    translate([87, 27, -2 + epsilon])  cylinder(r=3/2, h=2);
 	    translate([87, -27, -2 + epsilon]) cylinder(r=3/2, h=2);
 	}
+
+	// Show direction of input/output
+	translate([92, 12, 0]) rotate([0, 0, 15]) scale([1.6, 1, 1]) arrow();
+	translate([92, -12, 0]) rotate([0, 0, 180-15]) scale([1.6, 1, 1]) arrow();
+
 	translate([43.1 - 0.5, 21.2 - 0.3, 0])    connector13x2();
 	translate([43.1 - 0.5, -30 - 0.3, 0])     connector13x2();
 	translate([6.6, -23.3 - 7, 0])   sata();
@@ -155,8 +166,10 @@ module cased_volume() {
 }
 
 module heatsink_support() {
-    translate([87 - 55.5, 21.2 - 0.5, base_t - 1 + epsilon]) cube([15, 0.5, 2], center=true);
-    translate([87 - 55.5, -21.2 + 0.5, base_t - 1 + epsilon]) cube([15, 0.5, 2], center=true);
+    assign (extra_len= 1.41 * heatsink_extra_space) {
+       translate([87 - 55.5, 21.2 - 0.5, base_t - 1 + case_thick/2]) cube([15 + extra_len, 0.7, 2 + case_thick], center=true);
+       translate([87 - 55.5, -21.2 + 0.5, base_t - 1 + case_thick/2]) cube([15 + extra_len, 0.7, 2 + case_thick], center=true);
+   }
 }
 
 // Negative volume inside the case. Essentially the cased volume, but we
@@ -173,6 +186,12 @@ module inner_volume() {
 	translate([0, -27, above_shield]) cylinder(r=screw_base_dia/2, h=40);
 	translate([84, 27, stand_b + board_thick]) cylinder(r=screw_base_dia/2, h=40);
 	translate([84, -27, stand_b + board_thick]) cylinder(r=screw_base_dia/2, h=40);
+
+	// Shielding case plastic melting mounts. These go through holes in the
+	// shield to permanently mount the shield in the case ... with a soldering iron.
+	translate([-5, 0, base_t - 4]) cylinder(r=1.3, h=5);
+	translate([10, 13, base_t - 4]) cylinder(r=1.3, h=5);
+	translate([10, -13, base_t - 4]) cylinder(r=1.3, h=5);
 
 	// Some bridges around the connectors and heatsink corner to improve stability.
 	// The heatsink cuts away some corner here, so below in mount(), we add that again.
@@ -191,7 +210,7 @@ module inner_volume() {
 	translate([63, 8, base_t - 1.5 + epsilon]) cube([mechanical_support, 30, 3], center=true);
 
 	// Bar accross the heatsink.
-	translate([87 - 55.5, 0, base_t - 2/2]) rotate([0, 0, -45]) cube([32, 0.8, 2], center=true);
+	translate([87 - 55.5, 0, base_t - 2/2]) rotate([0, 0, -45]) cube([34 + heatsink_extra_space, 0.8, 2], center=true);
 
 	// Shield around LEDs (very close to ethernet - should not interfere with JTag)
 	translate([54, -26, base_t - stand_t/2]) cube([20, mechanical_support, stand_t], center=true);
